@@ -4,20 +4,15 @@ import fetch from "node-fetch";
 
 dotenv.config();
 
-// Vercel serverless function handler
 export default async function handler(req, res) {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    return res.status(204).send("");
-  }
-
-  // Set CORS headers
+  // CORS Headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -25,70 +20,49 @@ export default async function handler(req, res) {
 
   try {
     const { url } = req.body;
-
-    if (!url) {
-      return res.status(400).json({ error: "URL is required" });
-    }
+    if (!url) return res.status(400).json({ error: "URL is required" });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "GEMINI_API_KEY not configured" });
-    }
+    if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY not configured" });
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: "Analyze this URL for phishing: " + url + ". Return ONLY raw JSON. Do NOT wrap in markdown. Response must start with { and end with }. Format: { \"isPhishing\": boolean, \"confidence\": number, \"reasoning\": string, \"threatType\": string, \"recommendation\": string }"
-                }
-              ]
-            }
-          ]
-        })
-      }
-    );
+    // API URL using stable gemini-1.5-flash
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Analyze this URL for phishing: ${url}. Return ONLY raw JSON. No markdown. Format: { "isPhishing": boolean, "confidence": number, "reasoning": string, "threatType": string, "recommendation": string }`
+          }]
+        }]
+      })
+    });
 
     const data = await response.json();
 
+    // ఎర్రర్ వస్తే దాన్ని క్లియర్ గా పంపడం
     if (!response.ok) {
       console.error("Gemini API Error:", data);
-      return res.status(500).json(data);
+      return res.status(response.status).json({ error: data.error || "Gemini API failure" });
     }
 
-    const resultText = data.candidates[0].content.parts[0].text;
+    const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!resultText) return res.status(500).json({ error: "Empty response from AI" });
 
-    if (!resultText) {
-      console.error("Empty AI response:", data);
-      return res.status(500).json({ error: "Empty AI response" });
+    // JSON క్లీనింగ్
+    let cleaned = resultText.trim();
+    if (cleaned.includes("```json")) {
+      cleaned = cleaned.split("```json")[1].split("```")[0];
+    } else if (cleaned.includes("```")) {
+      cleaned = cleaned.split("```")[1].split("```")[0];
     }
 
-    // Clean markdown using simple string operations
-    let cleaned = resultText;
-    const jsonStart = cleaned.indexOf("{");
-    const jsonEnd = cleaned.lastIndexOf("}");
-    
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
-    }
+    return res.status(200).json(JSON.parse(cleaned));
 
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (err) {
-      console.error("RAW AI RESPONSE:", resultText);
-      return res.status(500).json({ error: "AI returned invalid JSON" });
-    }
-
-    return res.json(parsed);
   } catch (err) {
-    console.error("FULL ERROR:", err);
-    return res.status(500).json({ error: err.message || "Analysis failed" });
+    console.error("Server Error:", err);
+    return res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 }
