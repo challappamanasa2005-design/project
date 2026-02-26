@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     if (!apiKey) return res.status(500).json({ error: "API Key is missing in Vercel settings" });
 
-    // Gemini 2.0 Flash model ni v1beta URL tho pilustunnam
+    // Gemini 2.0 series v1beta lo chala stable ga untundhi
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Analyze this URL for phishing: ${url}. Return ONLY raw JSON. No markdown. Format: { "isPhishing": boolean, "confidence": number, "reasoning": string, "threatType": string, "recommendation": string }`
+            text: `Analyze this URL for phishing: ${url}. Return ONLY raw JSON. Do NOT wrap in markdown. Response must start with { and end with }. Format: { "isPhishing": boolean, "confidence": number, "reasoning": string, "threatType": string, "recommendation": string }`
           }]
         }]
       })
@@ -36,16 +36,20 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      // API quota exceed ayina leda key invalid ayina ikkada message kanipistundi
-      return res.status(response.status).json({ error: data.error?.message || "Gemini API Error" });
+      // Quota limit (429) leda API key issues ni ikkada handle chestham
+      return res.status(response.status).json({ 
+        error: data.error?.message || "Gemini API Error" 
+      });
     }
 
     let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    
+    // Markdown code blocks unte clean chesthundhi
     let cleaned = resultText.replace(/```json|```/g, "").trim();
     
     return res.status(200).json(JSON.parse(cleaned));
 
   } catch (err) {
-    return res.status(500).json({ error: err.message || "Server error occurred" });
+    return res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 }
