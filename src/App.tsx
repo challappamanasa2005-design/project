@@ -48,7 +48,7 @@ export default function App() {
 
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error occurred");
+      setError(data.error.message || "Analysis failed")
     } finally {
       setLoading(false);
     }
@@ -88,11 +88,11 @@ export default function App() {
         </form>
 
         {/* ERROR */}
-        {error && (
-          <div className="mt-6 text-red-400 text-center font-medium">
-            {error}
-          </div>
-        )}
+       {error && (
+  <div className="mt-6 text-red-400 text-center font-medium">
+    {typeof error === 'string' ? error : JSON.stringify(error)}
+  </div>
+)}
 
         {/* RESULT */}
         {result && (
