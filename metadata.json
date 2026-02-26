@@ -1,0 +1,5 @@
+{
+  "name": "LinkGuard AI - Phishing Detector",
+  "description": "AI-powered weblink detection tool that identifies phishing attempts and explains security risks using Gemini.",
+  "requestFramePermissions": []
+}
