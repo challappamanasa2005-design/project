@@ -28,17 +28,21 @@ export default async function handler(req, res) {
     // API URL using stable gemini-1.5-flash
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Analyze this URL for phishing: ${url}. Return ONLY raw JSON. No markdown. Format: { "isPhishing": boolean, "confidence": number, "reasoning": string, "threatType": string, "recommendation": string }`
-          }]
-        }]
-      })
-    });
+   // 1. First, define the URL
+const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+// 2. Then, use it in fetch correctly
+const response = await fetch(apiUrl, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    contents: [{
+      parts: [{
+        text: `Analyze this URL for phishing: ${url}. Return ONLY raw JSON. No markdown. Format: { "isPhishing": boolean, "confidence": number, "reasoning": string, "threatType": string, "recommendation": string }`
+      }]
+    }]
+  })
+});
 
     const data = await response.json();
 
