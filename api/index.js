@@ -5,7 +5,6 @@ import fetch from "node-fetch";
 dotenv.config();
 
 export default async function handler(req, res) {
-  // 1. Setup CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -17,12 +16,10 @@ export default async function handler(req, res) {
     const { url } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-      return res.status(500).json({ error: "GEMINI_API_KEY is not configured in Vercel" });
-    }
+    if (!apiKey) return res.status(500).json({ error: "API Key is missing in Vercel settings" });
 
-    // 2. Stable API Endpoint (v1 is most reliable for 1.5-flash)
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Gemini 2.0 Flash model ni v1beta URL tho pilustunnam
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -38,27 +35,17 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // 3. Handle API Errors (like Quota Exceeded)
     if (!response.ok) {
-      console.error("Gemini API Error:", data);
-      const errorMessage = data.error?.message || "Gemini API failure";
-      return res.status(response.status).json({ error: errorMessage });
+      // API quota exceed ayina leda key invalid ayina ikkada message kanipistundi
+      return res.status(response.status).json({ error: data.error?.message || "Gemini API Error" });
     }
 
-    // 4. Extract and Clean JSON Response
     let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     let cleaned = resultText.replace(/```json|```/g, "").trim();
     
-    try {
-      const parsed = JSON.parse(cleaned);
-      return res.status(200).json(parsed);
-    } catch (parseError) {
-      console.error("JSON Parse Error. Raw text:", resultText);
-      return res.status(500).json({ error: "AI returned invalid JSON format" });
-    }
+    return res.status(200).json(JSON.parse(cleaned));
 
   } catch (err) {
-    console.error("Server Error:", err);
-    return res.status(500).json({ error: err.message || "Internal Server Error" });
+    return res.status(500).json({ error: err.message || "Server error occurred" });
   }
 }
