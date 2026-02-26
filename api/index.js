@@ -19,12 +19,8 @@ export default async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: "API Key missing in Vercel settings" });
 
     
-    // Change v1beta to v1
-// Stable URL for Gemini 1.5 Flash
-const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-// OR if you want to try 2.0 (latest stable)
-// const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+  // Switching to 2.0 Flash for better compatibility with v1beta
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
 const response = await fetch(apiUrl, {
   method: "POST",
