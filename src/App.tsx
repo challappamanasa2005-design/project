@@ -48,7 +48,7 @@ export default function App() {
 
       setResult(data);
     } catch (err) {
-      setError(data.error.message || "Analysis failed")
+     setError(err.message || "Unexpected error occurred");
     } finally {
       setLoading(false);
     }
