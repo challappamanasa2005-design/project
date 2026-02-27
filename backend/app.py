@@ -24,26 +24,32 @@ def analyze():
 
         response = requests.get(api_url, headers=headers)
         
-        if response.status_code == 200:
+       # app.py lo analyze function lo ee change cheyandi
+if response.status_code == 200:
             stats = response.json()['data']['attributes']['last_analysis_stats']
             malicious = stats['malicious']
             
-            # Phishing Logic
-            is_phishing = malicious > 0
-            # Confidence Calculation
-            confidence = min(100, malicious * 25) if is_phishing else 95
-            
-            return jsonify({
-                "isPhishing": is_phishing,
-                "confidence": confidence,
-                "reasoning": f"Security engines flagged this URL {malicious} times.",
-                "recommendation": "⚠️ DANGER: Do not open this link!" if is_phishing else "✅ Safe to open."
-            })
-        else:
-            return jsonify({"isPhishing": False, "confidence": 0, "reasoning": "New URL, no data yet."})
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+            if malicious > 0:
+                return jsonify({
+                    "isPhishing": True,
+                    "confidence": min(100, malicious * 25),
+                    "reasoning": f"Security engines flagged this URL {malicious} times.",
+                    "recommendation": "🚨 DANGER: Do not open this link!"
+                })
+            elif stats['harmless'] > 0:
+                return jsonify({
+                    "isPhishing": False,
+                    "confidence": 95,
+                    "reasoning": "Verified as safe by security databases.",
+                    "recommendation": "✅ Safe to open."
+                })
+            else:
+                # Ee part kotha URLs (0 data) ni handle chestundhi
+                return jsonify({
+                    "isPhishing": False, 
+                    "confidence": 0, 
+                    "reasoning": "New URL detected. No security history found yet.",
+                    "recommendation": "⚠️ Caution: This link is unverified. Be careful!"
+                })
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
