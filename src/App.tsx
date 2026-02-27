@@ -93,26 +93,37 @@ export default function App() {
             {typeof error === 'string' ? error : "Error connecting to backend"}
           </div>
         )}
+{/* App.tsx lo Result Display Section */}
+{result && (
+  <div className="mt-8 p-6 bg-slate-800 rounded-xl border border-slate-700">
+    <div className="flex flex-col items-center gap-4">
+      {/* Dynamic Status & Color Logic */}
+      <h2 className={`text-3xl font-bold flex items-center gap-2 ${
+        result.status === "Phishing Detected" ? "text-red-500" : 
+        result.status === "Safe Link" ? "text-green-500" : "text-yellow-500"
+      }`}>
+        {result.status === "Phishing Detected" ? "🚨" : result.status === "Safe Link" ? "✅" : "⚠️"}
+        {result.status}
+      </h2>
+      
+      <p className="text-xl text-slate-300">
+        Confidence Score: <span className={result.confidence > 70 ? "text-red-400" : "text-green-400"}>
+          {result.confidence}%
+        </span>
+      </p>
 
-        {result && (
-          <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center justify-center gap-3">
-              {result.isPhishing ? (
-                <>
-                  <ShieldAlert className="text-red-400" size={32} />
-                  <span className="text-2xl font-bold text-red-400">
-                    Phishing Detected
-                  </span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="text-green-400" size={32} />
-                  <span className="text-2xl font-bold text-green-400">
-                    Safe Link
-                  </span>
-                </>
-              )}
-            </div>
+      <div className="w-full mt-4 p-4 bg-slate-900 rounded-lg">
+        <p className="text-slate-400 text-sm italic">{result.reasoning}</p>
+        <div className={`mt-3 p-3 rounded-md font-semibold text-center ${
+          result.status === "Phishing Detected" ? "bg-red-900/30 text-red-200" : 
+          result.status === "Safe Link" ? "bg-green-900/30 text-green-200" : "bg-yellow-900/30 text-yellow-200"
+        }`}>
+          {result.recommendation}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
             
             <div className="text-center text-slate-300">
               Confidence Score: <span className={`font-bold ${result.isPhishing ? 'text-red-400' : 'text-green-400'}`}>{result.confidence}%</span>
