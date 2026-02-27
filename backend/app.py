@@ -1,8 +1,8 @@
-import os
 import base64
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,40 +16,47 @@ def analyze():
     try:
         data = request.get_json()
         url = data.get("url")
-        
-        # URL encoding for VirusTotal
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+
         url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
         api_url = f"https://www.virustotal.com/api/v3/urls/{url_id}"
         headers = {"x-apikey": VT_API_KEY}
 
         response = requests.get(api_url, headers=headers)
         
-       # app.py lo analyze function lo ee change cheyandi
-if response.status_code == 200:
+        if response.status_code == 200:
             stats = response.json()['data']['attributes']['last_analysis_stats']
-            malicious = stats['malicious']
+            malicious = stats.get('malicious', 0)
+            harmless = stats.get('harmless', 0)
             
+            # 1. Phishing Case (Red)
             if malicious > 0:
                 return jsonify({
                     "isPhishing": True,
                     "confidence": min(100, malicious * 25),
-                    "reasoning": f"Security engines flagged this URL {malicious} times.",
-                    "recommendation": "🚨 DANGER: Do not open this link!"
+                    "status": "Phishing Detected",
+                    "reasoning": f"Flagged by {malicious} security engines.",
+                    "recommendation": "🚨 DO NOT OPEN: Dangerous link!"
                 })
-            elif stats['harmless'] > 0:
+            # 2. Safe Case (Green)
+            elif harmless > 0:
                 return jsonify({
                     "isPhishing": False,
                     "confidence": 95,
-                    "reasoning": "Verified as safe by security databases.",
+                    "status": "Safe Link",
+                    "reasoning": "Verified safe by security engines.",
                     "recommendation": "✅ Safe to open."
                 })
+            # 3. New/Unverified Case (Yellow)
             else:
-                # Ee part kotha URLs (0 data) ni handle chestundhi
                 return jsonify({
-                    "isPhishing": False, 
-                    "confidence": 0, 
-                    "reasoning": "New URL detected. No security history found yet.",
-                    "recommendation": "⚠️ Caution: This link is unverified. Be careful!"
+                    "isPhishing": False,
+                    "confidence": 0,
+                    "status": "Unverified Link",
+                    "reasoning": "New URL, no data yet.",
+                    "recommendation": "⚠️ Caution: Link is unknown."
                 })
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+        return jsonify({"error": "API Error"}), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
