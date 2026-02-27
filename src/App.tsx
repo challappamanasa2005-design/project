@@ -32,22 +32,25 @@ export default function App() {
     setResult(null);
 
     try {
-  
-      const response = await fetch("/api", { 
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ url: formattedUrl }),
-});
+      // ⚠️ IMPORTANT: Ikkada "/api" badulu mee Codespaces URL/analyze pettali
+      // Example: "https://turbo-fiesta...app.github.dev/analyze"
+      const BACKEND_URL = "https://turbo-fiesta-wrp4r5gx7v97296rv-5000.app.github.dev/analyze";
+
+      const response = await fetch(BACKEND_URL, { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: formattedUrl }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Failed to analyze link");
+        throw new Error(data?.error || data?.details || "Failed to analyze link");
       }
 
       setResult(data);
     } catch (err) {
-     setError(err.message || "Unexpected error occurred");
+      setError(err.message || "Unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -60,7 +63,6 @@ export default function App() {
           LinkGuard AI
         </h1>
 
-        {/* FORM */}
         <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
           <input
             type="text"
@@ -86,48 +88,50 @@ export default function App() {
           </button>
         </form>
 
-        {/* ERROR */}
-       {error && (
-  <div className="mt-6 text-red-400 text-center font-medium">
-    {typeof error === 'string' ? error : JSON.stringify(error)}
-  </div>
-)}
+        {error && (
+          <div className="mt-6 text-red-400 text-center font-medium bg-red-400/10 p-4 rounded-xl">
+            {typeof error === 'string' ? error : "Error connecting to backend"}
+          </div>
+        )}
 
-        {/* RESULT */}
         {result && (
-          <div className="mt-10 space-y-6">
+          <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex items-center justify-center gap-3">
               {result.isPhishing ? (
                 <>
-                  <ShieldAlert className="text-red-400" size={28} />
+                  <ShieldAlert className="text-red-400" size={32} />
                   <span className="text-2xl font-bold text-red-400">
                     Phishing Detected
                   </span>
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="text-green-400" size={28} />
+                  <ShieldCheck className="text-green-400" size={32} />
                   <span className="text-2xl font-bold text-green-400">
                     Safe Link
                   </span>
                 </>
               )}
             </div>
+            
             <div className="text-center text-slate-300">
-              Confidence: <span className="font-semibold">{result.confidence}%</span>
+              Confidence Score: <span className={`font-bold ${result.isPhishing ? 'text-red-400' : 'text-green-400'}`}>{result.confidence}%</span>
             </div>
-            <div className="bg-white/5 p-6 rounded-xl space-y-4 text-sm text-slate-300">
+
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/10 space-y-4 text-sm text-slate-300">
               <div>
-                <span className="font-semibold text-white">Threat Type:</span>{" "}
-                {result.threatType || "None"}
+                <span className="font-semibold text-white block mb-1">Threat Type:</span>
+                <span className="bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded text-xs">
+                  {result.threatType || "General Security Analysis"}
+                </span>
               </div>
               <div>
-                <span className="font-semibold text-white">Analysis:</span>
-                <p className="mt-2">{result.reasoning}</p>
+                <span className="font-semibold text-white block mb-1">Detailed Analysis:</span>
+                <p className="leading-relaxed">{result.reasoning}</p>
               </div>
-              <div>
-                <span className="font-semibold text-white">Recommendation:</span>
-                <p className="mt-2">{result.recommendation}</p>
+              <div className={`p-4 rounded-lg ${result.isPhishing ? 'bg-red-500/10 border border-red-500/20' : 'bg-green-500/10 border border-green-500/20'}`}>
+                <span className="font-semibold text-white block mb-1">Final Recommendation:</span>
+                <p className="font-medium">{result.recommendation}</p>
               </div>
             </div>
           </div>
