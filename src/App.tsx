@@ -34,7 +34,7 @@ export default function App() {
     try {
       // ⚠️ IMPORTANT: Ikkada "/api" badulu mee Codespaces URL/analyze pettali
       // Example: "https://turbo-fiesta...app.github.dev/analyze"
-      const BACKEND_URL = "https://fuzzy-train-xrv4j9w476w24q7-5000.app.github.dev/analyze";
+      const BACKEND_URL = "https://project-e0sv.onrender.com";
 
       const response = await fetch(BACKEND_URL, { 
         method: "POST",
