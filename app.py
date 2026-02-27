@@ -21,24 +21,29 @@ def check_url_safety(target_url):
     # 2. Send the request to VirusTotal
     response = requests.get(api_url, headers=headers)
 
-    if response.status_code == 200:
-        data = response.json()
-        # Look at the 'malicious' flag count from 70+ security engines
-        stats = data['data']['attributes']['last_analysis_stats']
-        malicious_hits = stats['malicious']
-        
-        print(f"\n--- Results for: {target_url} ---")
-        print(f"Malicious Detections: {malicious_hits}")
-        
-        if malicious_hits > 0:
-            print("Verdict: 🚨 DANGER! This looks like a phishing site.")
-        else:
-            print("Verdict: ✅ Safe. No security engines flagged this site.")
-    elif response.status_code == 404:
-        print("\nThis URL hasn't been scanned yet. Try submitting it for a scan first.")
+   # app.py lo analyze function lo ee change cheyandi
+if response.status_code == 200:
+    stats = response.json()['data']['attributes']['last_analysis_stats']
+    malicious = stats['malicious']
+    suspicious = stats['suspicious']
+    total_flags = malicious + suspicious
+    
+    if total_flags > 0:
+        is_phishing = True
+        confidence = min(100, total_flags * 20)
+        reasoning = f"Security engines flagged this URL {total_flags} times."
+        recommendation = "🚨 DANGER: Do not open this link!"
+    elif stats['harmless'] == 0 and malicious == 0:
+        # Idhi kotha URL ithe (No data case)
+        is_phishing = False
+        confidence = 0
+        reasoning = "New URL detected. No security data available yet."
+        recommendation = "⚠️ Use caution: This link is unverified."
     else:
-        print(f"Error {response.status_code}: {response.text}")
-
+        is_phishing = False
+        confidence = 95
+        reasoning = "Verified safe by security engines."
+        recommendation = "✅ Safe to open."
 # 3. Ask user for a URL to check
 user_input = input("Enter a website URL to analyze: ")
 check_url_safety(user_input)
