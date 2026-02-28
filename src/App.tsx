@@ -19,9 +19,17 @@ export default function App() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  // URL Validation Regex
+  const urlRegex =
+    /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
+
+  const isValidUrl = urlRegex.test(url);
+
   const extractDomain = (input: string) => {
     try {
-      const parsed = new URL(input);
+      const parsed = new URL(
+        input.startsWith("http") ? input : `https://${input}`
+      );
       return {
         protocol: parsed.protocol,
         domain: parsed.hostname,
@@ -32,20 +40,21 @@ export default function App() {
   };
 
   const handleScan = () => {
-    if (!url.trim()) return;
+    if (!url.trim() || !isValidUrl) return;
 
     setLoading(true);
     setResult(null);
 
     setTimeout(() => {
       const isSafe = !url.toLowerCase().includes("phishing");
-
-      const confidence = isSafe ? 92 : 78;
+      const confidence = isSafe ? 92 : 76;
 
       const riskLevel =
-        confidence > 85 ? "Low" :
-        confidence > 70 ? "Medium" :
-        "High";
+        confidence > 85
+          ? "Low"
+          : confidence > 70
+          ? "Medium"
+          : "High";
 
       const response: ScanResult = {
         status: isSafe ? "SAFE" : "PHISHING",
@@ -59,13 +68,13 @@ export default function App() {
 
       setResult(response);
 
-      setHistory(prev => [
+      setHistory((prev) => [
         { url, status: response.status },
         ...prev.slice(0, 4),
       ]);
 
       setLoading(false);
-    }, 1500);
+    }, 1200);
   };
 
   const preview = extractDomain(url);
@@ -78,10 +87,10 @@ export default function App() {
       : "bg-red-500";
 
   return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 flex">
 
       {/* Sidebar */}
-      <div className="w-72 bg-white border-r p-6 hidden md:block">
+      <div className="w-72 bg-white border-r border-gray-200 p-6 hidden md:block">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Scan History
         </h2>
@@ -113,7 +122,7 @@ export default function App() {
 
       {/* Main Section */}
       <div className="flex-1 flex items-center justify-center p-8">
-       <div className="w-full max-w-3xl bg-white/90 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl p-10 space-y-8">
+        <div className="w-full max-w-3xl bg-white border border-gray-200 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-10 space-y-8">
 
           {/* Header */}
           <div>
@@ -125,38 +134,36 @@ export default function App() {
             </p>
           </div>
 
-       const urlRegex =
-  /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
+          {/* Input Section */}
+          <div>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="Enter URL to analyze..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="flex-1 p-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
-const isValidUrl = urlRegex.test(url);
+              <button
+                onClick={handleScan}
+                disabled={loading || !isValidUrl}
+                className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Analyzing..." : "Scan"}
+              </button>
+            </div>
 
-<div className="flex gap-4">
-  <input
-    type="text"
-    placeholder="Enter URL to analyze..."
-    value={url}
-    onChange={(e) => setUrl(e.target.value)}
-    className="flex-1 p-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-  />
-
-  <button
-    onClick={handleScan}
-    disabled={loading || !isValidUrl}
-    className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    {loading ? "Analyzing..." : "Scan"}
-  </button>
-</div>
-
-{url && !isValidUrl && (
-  <p className="text-red-500 text-sm mt-2">
-    Please enter a valid URL (example: https://example.com)
-  </p>
-)}
+            {url && !isValidUrl && (
+              <p className="text-red-500 text-sm mt-2">
+                Please enter a valid URL (example: https://example.com)
+              </p>
+            )}
+          </div>
 
           {/* URL Preview */}
           {preview && (
-            <div className="bg-gray-50 border rounded-lg p-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-sm text-gray-500">URL Preview</p>
               <p className="text-gray-800 font-medium mt-1">
                 Protocol: {preview.protocol}
@@ -218,7 +225,7 @@ const isValidUrl = urlRegex.test(url);
                 </p>
               </div>
 
-              {/* Threat Type */}
+              {/* Threat Info */}
               <div>
                 <p className="text-sm text-gray-500">Analysis Type</p>
                 <p className="text-gray-700 font-medium mt-1">
@@ -228,6 +235,7 @@ const isValidUrl = urlRegex.test(url);
 
             </div>
           )}
+
         </div>
       </div>
     </div>
