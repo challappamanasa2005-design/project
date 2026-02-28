@@ -78,7 +78,7 @@ export default function App() {
       : "bg-red-500";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 flex">
 
       {/* Sidebar */}
       <div className="w-72 bg-white border-r p-6 hidden md:block">
@@ -113,7 +113,7 @@ export default function App() {
 
       {/* Main Section */}
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-10 space-y-8">
+       <div className="w-full max-w-3xl bg-white/90 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl p-10 space-y-8">
 
           {/* Header */}
           <div>
