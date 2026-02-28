@@ -125,15 +125,13 @@ export default function App() {
             </p>
           </div>
 
-          {/* Input */}
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Enter URL to analyze..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <input
+  type="text"
+  placeholder="Enter URL to analyze..."
+  value={url}
+  onChange={(e) => setUrl(e.target.value)}
+  className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
 
             <button
               onClick={handleScan}
