@@ -13,60 +13,19 @@ CORS(app)
 
 VT_API_KEY = os.getenv("VT_API_KEY")
 
-SUSPICIOUS_TLDS = ["ru", "tk", "ml", "ga", "cf", "xyz", "top"]
-PHISHING_KEYWORDS = [
-    "login", "verify", "secure", "update",
-    "account", "signin", "bank", "auth",
-    "wallet", "recovery", "confirm", "security"
-]
+def check_suspicious(url):
+    domain = urlparse(url).netloc.lower()
 
-BRANDS = ["paypal", "google", "facebook", "instagram", "amazon", "microsoft"]
+    # 1. Typosquatting
+    if re.search(r'[0-9]{2,}', domain) and any(x in domain for x in ['google', 'paypal', 'faceb']):
+        return "Typosquatting detected (numbers mimicking brand names)."
 
+    # 2. Phishing Keywords
+    keywords = ['login', 'secure', 'verify', 'update', 'banking']
+    if any(kw in url.lower() for kw in keywords):
+        return "URL contains phishing-related keywords."
 
-def analyze_structure(url):
-    parsed = urlparse(url)
-    domain = parsed.netloc.lower()
-    risk = 0
-    reasons = []
-
-    # 1. HTTP instead of HTTPS
-    if parsed.scheme != "https":
-        risk += 15
-        reasons.append("Uses insecure HTTP protocol.")
-
-    # 2. Brand impersonation
-    for brand in BRANDS:
-        if brand in domain and not domain.endswith(f"{brand}.com"):
-            risk += 40
-            reasons.append(f"Brand impersonation detected ({brand}).")
-
-    # 3. Phishing keywords
-    if any(k in url.lower() for k in PHISHING_KEYWORDS):
-        risk += 20
-        reasons.append("Contains phishing-related keywords.")
-
-    # 4. Suspicious TLD
-    tld = domain.split(".")[-1]
-    if tld in SUSPICIOUS_TLDS:
-        risk += 20
-        reasons.append(f"Suspicious top-level domain (.{tld}).")
-
-    # 5. Too many subdomains
-    if domain.count(".") > 3:
-        risk += 15
-        reasons.append("Excessive subdomains detected.")
-
-    # 6. @ trick
-    if "@" in url:
-        risk += 30
-        reasons.append("Contains '@' redirection trick.")
-
-    # 7. IP address usage
-    if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", domain):
-        risk += 30
-        reasons.append("Uses IP address instead of domain.")
-
-    return risk, reasons
+    return None
 
 
 @app.route("/analyze", methods=["POST"])
@@ -76,86 +35,84 @@ def analyze():
         url = data.get("url")
 
         if not url:
-            return jsonify({"error": "URL required"}), 400
+            return jsonify({"error": "URL is required"}), 400
 
-        risk_score, reasons = analyze_structure(url)
+        # Phase 1: Local heuristic
+        suspicious_reason = check_suspicious(url)
 
-        # VirusTotal Check
-        malicious = 0
-        suspicious = 0
-        vt_found = False
+        # Phase 2: VirusTotal Check
+        url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
 
-        try:
-            url_id = base64.urlsafe_b64encode(url.encode()).decode().strip("=")
+        response = requests.get(
+            f"https://www.virustotal.com/api/v3/urls/{url_id}",
+            headers={"x-apikey": VT_API_KEY}
+        )
 
-            response = requests.get(
-                f"https://www.virustotal.com/api/v3/urls/{url_id}",
-                headers={"x-apikey": VT_API_KEY},
-                timeout=10
-            )
+        # If URL not found in VirusTotal database
+        if response.status_code == 404:
+            return jsonify({
+                "status": "Unverified Link",
+                "confidence": 50,
+                "reasoning": "This URL is not found in VirusTotal database.",
+                "recommendation": "⚠️ Proceed with caution. This link is new or unscanned."
+            })
 
-            if response.status_code == 200:
-                vt_found = True
-                result = response.json()
-                stats = result['data']['attributes']['last_analysis_stats']
-                malicious = stats.get('malicious', 0)
-                suspicious = stats.get('suspicious', 0)
+        if response.status_code != 200:
+            return jsonify({
+                "status": "Unverified Link",
+                "confidence": 40,
+                "reasoning": "VirusTotal API error or no scan data available.",
+                "recommendation": "⚠️ Unable to verify this link."
+            })
 
-        except Exception:
-            pass
+        result = response.json()
+        stats = result['data']['attributes']['last_analysis_stats']
 
-        # ---- FINAL CLASSIFICATION LOGIC ---- #
+        malicious = stats.get('malicious', 0)
+        suspicious = stats.get('suspicious', 0)
+        harmless = stats.get('harmless', 0)
+        total_scans = sum(stats.values())
 
-        # 1. If VT confirms malicious
+        # Final Decision Logic
         if malicious > 0:
             return jsonify({
                 "status": "Phishing Detected",
-                "confidence": 98,
-                "reasons": reasons + [f"VirusTotal flagged by {malicious} engines."],
-                "risk_score": risk_score
+                "confidence": 100,
+                "reasoning": f"Flagged by {malicious} security engines.",
+                "recommendation": "🚨 Do NOT open this link."
             })
 
-        # 2. If strong structural phishing (brand + keywords)
-        if risk_score >= 50:
+        elif suspicious > 2:
             return jsonify({
                 "status": "Phishing Detected",
-                "confidence": min(95, risk_score + 20),
-                "reasons": reasons,
-                "risk_score": risk_score
+                "confidence": 85,
+                "reasoning": f"{suspicious} engines marked it suspicious.",
+                "recommendation": "🚨 High risk link."
             })
 
-        # 3. If moderate suspicion
-        if risk_score >= 25 or suspicious > 2:
+        elif suspicious_reason:
             return jsonify({
-                "status": "Unverified",
+                "status": "Unverified Link",
                 "confidence": 70,
-                "reasons": reasons,
-                "risk_score": risk_score
+                "reasoning": suspicious_reason,
+                "recommendation": "⚠️ Looks suspicious but not confirmed malicious."
             })
 
-        # 4. Only mark Safe if:
-        # - Low structural risk
-        # - AND VT has data
-        # - AND no suspicious flags
-        if risk_score < 25 and vt_found and malicious == 0 and suspicious == 0:
+        elif harmless > 5 and malicious == 0:
             return jsonify({
-                "status": "Safe",
-                "confidence": 90,
-                "reasons": ["No structural risk and no VT flags."],
-                "risk_score": risk_score
+                "status": "Safe Link",
+                "confidence": 95,
+                "reasoning": "Multiple security engines marked it harmless.",
+                "recommendation": "✅ Safe to open."
             })
 
-        # 5. Otherwise Unverified
-        return jsonify({
-            "status": "Unverified",
-            "confidence": 60,
-            "reasons": reasons if reasons else ["Insufficient data to classify."],
-            "risk_score": risk_score
-        })
+        else:
+            return jsonify({
+                "status": "Unverified Link",
+                "confidence": 60,
+                "reasoning": "Not enough data to classify this link.",
+                "recommendation": "⚠️ Proceed carefully."
+            })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
