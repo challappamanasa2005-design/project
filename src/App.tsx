@@ -125,22 +125,34 @@ export default function App() {
             </p>
           </div>
 
-          <input
-  type="text"
-  placeholder="Enter URL to analyze..."
-  value={url}
-  onChange={(e) => setUrl(e.target.value)}
-  className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-/>
+       const urlRegex =
+  /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
 
-            <button
-              onClick={handleScan}
-              disabled={loading}
-              className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {loading ? "Analyzing..." : "Scan"}
-            </button>
-          </div>
+const isValidUrl = urlRegex.test(url);
+
+<div className="flex gap-4">
+  <input
+    type="text"
+    placeholder="Enter URL to analyze..."
+    value={url}
+    onChange={(e) => setUrl(e.target.value)}
+    className="flex-1 p-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+  />
+
+  <button
+    onClick={handleScan}
+    disabled={loading || !isValidUrl}
+    className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {loading ? "Analyzing..." : "Scan"}
+  </button>
+</div>
+
+{url && !isValidUrl && (
+  <p className="text-red-500 text-sm mt-2">
+    Please enter a valid URL (example: https://example.com)
+  </p>
+)}
 
           {/* URL Preview */}
           {preview && (
