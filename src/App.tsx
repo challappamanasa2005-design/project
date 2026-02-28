@@ -1,134 +1,123 @@
-/**
- * SPDX-License-Identifier: Apache-2.0
- */
-import React, { useState } from "react";
-import { ShieldAlert, ShieldCheck, Loader2, AlertTriangle } from "lucide-react";
+import { useState } from "react";
 
-interface LinkAnalysis {
-  isPhishing: boolean;
+type ScanResult = {
+  status: "SAFE" | "PHISHING";
   confidence: number;
-  reasoning: string;
-  threatType: string;
-  recommendation: string;
-  status: string; // Backend status field kosam
-}
+  threat: string;
+  message: string;
+};
 
 export default function App() {
-  const [url, setUrl] = useState("");
-  const [result, setResult] = useState<LinkAnalysis | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<ScanResult | null>(null);
 
-  const handleAnalyze = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleScan = () => {
     if (!url.trim()) return;
 
-    let formattedUrl = url.trim();
-    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-      formattedUrl = "https://" + formattedUrl;
-    }
-
     setLoading(true);
-    setError(null);
     setResult(null);
 
-    try {
-      // ✅ Render URL with /analyze endpoint
-      const BACKEND_URL = "https://project-e0sv.onrender.com/analyze";
+    // 🔴 Replace this block with your real API call
+    setTimeout(() => {
+      const isSafe = !url.toLowerCase().includes("phishing");
 
-      const response = await fetch(BACKEND_URL, { 
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: formattedUrl }),
-      });
+      const response: ScanResult = {
+        status: isSafe ? "SAFE" : "PHISHING",
+        confidence: isSafe ? 95 : 88,
+        threat: "General Security Analysis",
+        message: isSafe
+          ? "No malicious indicators detected."
+          : "Suspicious domain patterns detected.",
+      };
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to analyze link");
-      }
-
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Error connecting to backend");
-    } finally {
+      setResult(response);
       setLoading(false);
-    }
+    }, 2000);
+  };
+
+  const getResultStyles = () => {
+    if (!result) return "";
+    return result.status === "SAFE"
+      ? "border-green-500 bg-green-900/20"
+      : "border-red-500 bg-red-900/20";
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-slate-950 text-white">
-      <div className="glass-card w-full max-w-2xl p-10 rounded-3xl bg-slate-900/50 border border-white/10 shadow-2xl">
-        <h1 className="text-4xl font-bold text-center mb-10 flex items-center justify-center gap-3">
-          <ShieldCheck className="text-indigo-500" size={40} />
-          LinkGuard AI
-        </h1>
+    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl bg-gray-900 rounded-2xl shadow-2xl p-8 space-y-6">
 
-        <form onSubmit={handleAnalyze} className="flex flex-col gap-6">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">🛡 LinkGuard AI</h1>
+          <p className="text-gray-400 text-sm">
+            AI-powered URL Threat Detection Engine
+          </p>
+        </div>
+
+        {/* Input Section */}
+        <div className="space-y-4">
           <input
             type="text"
+            placeholder="Enter URL to analyze..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter URL to scan (e.g., google.com)"
-            className="w-full px-5 py-4 rounded-xl outline-none bg-white/5 border border-white/10 focus:border-indigo-500 transition"
-            disabled={loading}
+            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
-          <button
-            type="submit"
-            disabled={loading || !url.trim()}
-            className="flex items-center justify-center gap-2 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 transition font-semibold disabled:opacity-50"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Scanning Link...
-              </>
-            ) : (
-              "Scan Link"
-            )}
-          </button>
-        </form>
 
-        {error && (
-          <div className="mt-6 text-red-400 text-center font-medium bg-red-400/10 p-4 rounded-xl border border-red-500/20">
-            {error}
+          <button
+            onClick={handleScan}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 py-3 rounded-lg font-semibold hover:scale-105 transition-transform duration-300 disabled:opacity-50"
+          >
+            {loading ? "Scanning..." : "Scan Link"}
+          </button>
+        </div>
+
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="flex justify-center">
+            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
 
+        {/* Result Section */}
         {result && (
-          <div className="mt-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700 animate-in fade-in zoom-in duration-300">
-            <div className="flex flex-col items-center gap-4 text-center">
-              
-              {/* status display with colors */}
-              <h2 className={`text-3xl font-bold flex items-center gap-2 ${
-                result.status === "Phishing Detected" ? "text-red-500" : 
-                result.status === "Safe Link" ? "text-green-500" : "text-yellow-500"
-              }`}>
-                {result.status === "Phishing Detected" ? <ShieldAlert size={32} /> : 
-                 result.status === "Safe Link" ? <ShieldCheck size={32} /> : <AlertTriangle size={32} />}
-                {result.status}
-              </h2>
-              
-              <p className="text-xl text-slate-300">
-                Confidence Score: <span className={result.confidence > 70 || result.status === "Phishing Detected" ? "text-red-400" : "text-green-400"}>
-                  {result.confidence}%
-                </span>
-              </p>
+          <div className={`border rounded-xl p-6 space-y-4 ${getResultStyles()}`}>
+            <h2
+              className={`text-xl font-bold ${
+                result.status === "SAFE"
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
+              {result.status === "SAFE"
+                ? "✅ Safe Link"
+                : "⚠ High Risk Detected"}
+            </h2>
 
-              <div className="w-full mt-4 p-5 bg-slate-950/50 rounded-xl space-y-4">
-                <div>
-                  <span className="text-slate-500 text-xs uppercase tracking-wider font-bold">Analysis Details</span>
-                  <p className="text-slate-300 mt-1 italic">{result.reasoning}</p>
-                </div>
-                
-                <div className={`p-4 rounded-lg font-bold ${
-                  result.status === "Phishing Detected" ? "bg-red-500/10 text-red-400 border border-red-500/20" : 
-                  result.status === "Safe Link" ? "bg-green-500/10 text-green-400 border border-green-500/20" : 
-                  "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
-                }`}>
-                  {result.recommendation}
-                </div>
+            {/* Confidence Bar */}
+            <div>
+              <p className="text-sm text-gray-400 mb-1">
+                Confidence: {result.confidence}%
+              </p>
+              <div className="w-full bg-gray-800 rounded-full h-3">
+                <div
+                  className={`h-3 rounded-full ${
+                    result.status === "SAFE"
+                      ? "bg-green-500"
+                      : "bg-red-500"
+                  }`}
+                  style={{ width: `${result.confidence}%` }}
+                ></div>
               </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-400">
+                Threat Type: {result.threat}
+              </p>
+              <p className="text-gray-300 mt-2">{result.message}</p>
             </div>
           </div>
         )}
