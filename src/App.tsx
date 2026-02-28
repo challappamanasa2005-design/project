@@ -19,12 +19,6 @@ export default function App() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // URL Validation Regex
-  const urlRegex =
-    /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
-
-  const isValidUrl = urlRegex.test(url);
-
   const extractDomain = (input: string) => {
     try {
       const parsed = new URL(
@@ -40,7 +34,7 @@ export default function App() {
   };
 
   const handleScan = () => {
-    if (!url.trim() || !isValidUrl) return;
+    if (!url.trim()) return;
 
     setLoading(true);
     setResult(null);
@@ -135,30 +129,22 @@ export default function App() {
           </div>
 
           {/* Input Section */}
-          <div>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                placeholder="Enter URL to analyze..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="flex-1 p-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Enter URL to analyze..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="flex-1 p-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-400 caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
 
-              <button
-                onClick={handleScan}
-                disabled={loading || !isValidUrl}
-                className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Analyzing..." : "Scan"}
-              </button>
-            </div>
-
-            {url && !isValidUrl && (
-              <p className="text-red-500 text-sm mt-2">
-                Please enter a valid URL (example: https://example.com)
-              </p>
-            )}
+            <button
+              onClick={handleScan}
+              disabled={loading}
+              className="px-6 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {loading ? "Analyzing..." : "Scan"}
+            </button>
           </div>
 
           {/* URL Preview */}
@@ -196,7 +182,7 @@ export default function App() {
 
               <p className="text-gray-600">{result.message}</p>
 
-              {/* Risk Level Meter */}
+              {/* Risk Meter */}
               <div>
                 <p className="text-sm text-gray-500 mb-2">Risk Level</p>
                 <div className="w-full bg-gray-200 rounded-full h-3">
